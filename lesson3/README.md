@@ -1,51 +1,77 @@
-# Kafka KRaft + UI
+# Lesson 3 — Kafka Cluster Setup & Fault Tolerance
 
-Single-node Kafka in KRaft mode (no Zookeeper) with Kafka UI.
+3-broker Kafka cluster in KRaft mode with fault tolerance demo.
 
 ## Stack
-- Apache Kafka 7.6.1 (Confluent) — KRaft mode, broker + controller in one node
-- Kafka UI (Provectus) — web interface at http://localhost:8080
+- Confluent Kafka 7.6.1 — 3 brokers, KRaft mode
+- Kafka UI — http://localhost:8080
 
 ## Start
 
 ```bash
-docker-compose up -d
+cd scripts
+docker-compose -f docker-compose.kraft.yml up -d
 ```
-
-Open http://localhost:8080
 
 ## Stop
 
 ```bash
-docker-compose down
+docker-compose -f docker-compose.kraft.yml down
 ```
 
-## Usage
+## Key config explained
 
-### Create topic
+| Parameter | Value | Meaning |
+|---|---|---|
+| `KAFKA_DEFAULT_REPLICATION_FACTOR` | 3 | Every topic replicated to all 3 brokers |
+| `KAFKA_MIN_INSYNC_REPLICAS` | 2 | At least 2 brokers must confirm write |
+| `KAFKA_AUTO_CREATE_TOPICS_ENABLE` | false | Topics must be created explicitly |
+| `KAFKA_PROCESS_ROLES` | broker,controller | Each node is both broker and controller (KRaft) |
+
+## Demo: create topic
+
 ```bash
-docker exec -ti kafka kafka-topics --create \
-  --topic <topic-name> \
+docker exec -ti kafka1 kafka-topics \
+  --create --topic demo-topic \
   --partitions 3 \
-  --bootstrap-server kafka:9092
+  --replication-factor 3 \
+  --bootstrap-server kafka1:19092
+
+docker exec -ti kafka1 kafka-topics \
+  --describe --topic demo-topic \
+  --bootstrap-server kafka1:19092
 ```
 
-### Producer
-```bash
-docker exec -ti kafka kafka-console-producer \
-  --topic <topic-name> \
-  --bootstrap-server kafka:9092
+Expected output — each broker is leader for exactly one partition:
+```
+Partition: 0  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+Partition: 1  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+Partition: 2  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3
 ```
 
-### Consumer
+## Demo: fault tolerance
+
+Stop one broker:
 ```bash
-docker exec -ti kafka kafka-console-consumer \
-  --topic <topic-name> \
-  --from-beginning \
-  --bootstrap-server kafka:9092
+docker stop kafka3
 ```
+
+Check topic — new leader elected automatically:
+```bash
+docker exec -ti kafka1 kafka-topics \
+  --describe --topic demo-topic \
+  --bootstrap-server kafka1:19092
+```
+
+Cluster keeps working with 2 brokers. Bring kafka3 back:
+```bash
+docker start kafka3
+```
+
+kafka3 rejoins ISR automatically.
 
 ## Ports
-- `19092` — Kafka external (for clients outside Docker)
-- `9092` — Kafka internal (inside Docker network)
+- `9092` — kafka1 external
+- `9093` — kafka2 external
+- `9094` — kafka3 external
 - `8080` — Kafka UI
