@@ -1,0 +1,1 @@
+docker exec -it kafka-practice kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders_created --from-beginning --property print.partition=true --property print.offset=true --property print.key=true --property print.value=true

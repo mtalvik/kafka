@@ -1,0 +1,27 @@
+docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 <операция>
+
+
+replication.factor=3
+min.insync.replicas = 2
+acks = all
+
+
+log.dirs=/logs,/log2
+
+
+
+orders_0/
+  segment 0: offsets 0–999
+  segment 1: offsets 1000–1999
+  segment 2: offsets 2000–2999
+  segment 3: offsets 3000–3999 ← active
+
+
+kafka-topics.sh \
+  --bootstrap-server localhost:9092 \
+  --create \
+  --topic orders \
+  --partitions 3 \
+  --replication-factor 3 \
+  --config retention.ms=604800000 \
+  --config segment.bytes=1073741824
