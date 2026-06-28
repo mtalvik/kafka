@@ -1,0 +1,38 @@
+hostPort: kafka:10030
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+whitelistObjectNames:
+  - "kafka.server:*"
+  - "kafka.controller:*"
+  - "kafka.network:*"
+  - "java.lang:*"
+rules:
+  - pattern: 'kafka.server<type=ReplicaManager, name=(UnderReplicatedPartitions|PartitionCount|LeaderCount|IsrShrinksPerSec|IsrExpandsPerSec)><>(Value|Count|OneMinuteRate)'
+    name: kafka_server_replicamanager_$1_$2
+    type: GAUGE
+
+  - pattern: 'kafka.controller<type=KafkaController, name=(ActiveControllerCount|OfflinePartitionsCount)><>Value'
+    name: kafka_controller_kafkacontroller_$1
+    type: GAUGE
+
+  - pattern: 'kafka.controller<type=ControllerStats, name=(LeaderElectionRateAndTimeMs|UncleanLeaderElectionsPerSec)><>(Count|OneMinuteRate|Mean|Max)'
+    name: kafka_controller_controllerstats_$1_$2
+    type: GAUGE
+
+  - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(BytesInPerSec|BytesOutPerSec|MessagesInPerSec|TotalProduceRequestsPerSec|TotalFetchRequestsPerSec|FailedProduceRequestsPerSec|FailedFetchRequestsPerSec)><>(Count|OneMinuteRate|MeanRate)'
+    name: kafka_server_brokertopicmetrics_$1_$2
+    type: GAUGE
+
+  - pattern: 'kafka.network<type=RequestMetrics, name=(RequestsPerSec|TotalTimeMs|RequestQueueTimeMs|LocalTimeMs|RemoteTimeMs|ResponseQueueTimeMs|ResponseSendTimeMs), request=(Produce|FetchConsumer|FetchFollower|Metadata|OffsetCommit|FindCoordinator|JoinGroup|SyncGroup|Heartbeat)><>(Count|OneMinuteRate|Mean|Max|99thPercentile)'
+    name: kafka_network_requestmetrics_$1_$3
+    labels:
+      request: "$2"
+    type: GAUGE
+
+  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(used|committed|max)'
+    name: jvm_memory_heap_$1
+    type: GAUGE
+
+  - pattern: 'java.lang<type=OperatingSystem><>(ProcessCpuLoad|SystemCpuLoad|OpenFileDescriptorCount|MaxFileDescriptorCount)'
+    name: jvm_os_$1
+    type: GAUGE

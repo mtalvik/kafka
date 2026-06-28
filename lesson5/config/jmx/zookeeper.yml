@@ -1,0 +1,23 @@
+hostPort: zookeeper:10020
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+whitelistObjectNames:
+  - "org.apache.ZooKeeperService:*"
+  - "java.lang:*"
+rules:
+  - pattern: 'org.apache.ZooKeeperService<name0=ReplicatedServer_id(\d+), name1=replica.(\d+), name2=(Leader|Follower)><>(AvgRequestLatency|MaxRequestLatency|MinRequestLatency|OutstandingRequests|NumAliveConnections|PacketsReceived|PacketsSent|OpenFileDescriptorCount|MaxFileDescriptorCount)'
+    name: zookeeper_$3_$4
+    labels:
+      server_id: "$1"
+      replica: "$2"
+    type: GAUGE
+
+  - pattern: 'org.apache.ZooKeeperService<name0=StandaloneServer_port(\d+)><>(AvgRequestLatency|MaxRequestLatency|MinRequestLatency|OutstandingRequests|NumAliveConnections|PacketsReceived|PacketsSent|OpenFileDescriptorCount|MaxFileDescriptorCount)'
+    name: zookeeper_standalone_$2
+    labels:
+      port: "$1"
+    type: GAUGE
+
+  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(used|committed|max)'
+    name: zookeeper_jvm_memory_heap_$1
+    type: GAUGE

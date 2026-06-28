@@ -1,0 +1,22 @@
+# PKI artifacts — generated locally, NEVER commit
+# private keys
+ca-key
+*.jks
+
+# CA serial (generated)
+ca-cert.srl
+
+# CSR + signed cert intermediates (regenerable)
+cert-file
+cert-signed
+cert-client-file
+cert-client-signed
+
+# CA cert technically public, but generated locally — easier to gitignore
+ca-cert
+
+# Kafka runtime data (KRaft metadata + log segments)
+kafka-data/
+
+# Kafka server logs (если запускала с -daemon)
+logs/
