@@ -1,0 +1,17 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+crash.*.log
+
+# Variables with secrets
+*.tfvars
+!*.tfvars.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
