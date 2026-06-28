@@ -130,14 +130,14 @@ log.retention.check.interval.ms=300000
 
 ############################# SASL/PLAIN configuration #############################
 listeners=SASL_PLAINTEXT://:9092,CONTROLLER://:9093
-advertised.listeners=SASL_PLAINTEXT://<KAFKA_BROKER_IP>:9092
+advertised.listeners=SASL_PLAINTEXT://<KAFKA_HOST>:9092
 listener.security.protocol.map=CONTROLLER:SASL_PLAINTEXT,SASL_PLAINTEXT:SASL_PLAINTEXT
 
 # SASL mechanism
 sasl.enabled.mechanisms=PLAIN
 sasl.mechanism.inter.broker.protocol=PLAIN
 
-# Authorizer (StandardAuthorizer для KRaft)
+# Authorizer (StandardAuthorizer for KRaft)
 authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
 super.users=User:admin
 allow.everyone.if.no.acl.found=false

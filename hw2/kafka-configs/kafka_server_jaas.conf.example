@@ -1,13 +1,9 @@
-# Kafka SASL/PLAIN JAAS configuration
-# Copy to kafka_server_jaas.conf and replace <CHANGE_ME> values.
-# This file is loaded by the broker via KAFKA_OPTS=-Djava.security.auth.login.config=...
-
 KafkaServer {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    username="admin"
-   password="<CHANGE_ME_ADMIN_PASSWORD>"
-   user_admin="<CHANGE_ME_ADMIN_PASSWORD>"
-   user_alice="<CHANGE_ME_ALICE_PASSWORD>"
-   user_bob="<CHANGE_ME_BOB_PASSWORD>"
-   user_charlie="<CHANGE_ME_CHARLIE_PASSWORD>";
+   password="changeme"
+   user_admin="changeme"
+   user_alice="changeme"
+   user_bob="changeme"
+   user_charlie="changeme";
 };

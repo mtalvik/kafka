@@ -16,11 +16,11 @@ processors:
 
 output.kafka:
   hosts:
-    - "172.31.29.117:9092"
+    - "<KAFKA_HOST>:9092"
   topic: logs
   required_acks: 1
   username: "alice"
-  password: "<CHANGE_ME_ALICE_PASSWORD>"
+  password: "changeme"
   sasl.mechanism: "PLAIN"
 
 logging.level: info

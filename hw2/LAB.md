@@ -191,7 +191,7 @@ broker with the right credentials, e.g. `clients/alice.properties`:
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=PLAIN
 sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
-    username="alice" password="<alice-password>";
+    username="alice" password="changeme";
 ```
 
 ### 3. ACL authorization
