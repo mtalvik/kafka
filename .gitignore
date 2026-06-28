@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Jupyter autosaves
+.ipynb_checkpoints/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Kafka runtime junk (in case it appears anywhere)
+kafka-data/
+logs/
+
+# Secrets / PKI artifacts (mirrors lesson6/.gitignore — defence in depth)
+*.jks
+ca-key
+ca-cert
+ca-cert.srl
+cert-file
+cert-signed
+cert-client-file
+cert-client-signed
