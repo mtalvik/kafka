@@ -1,0 +1,27 @@
+filebeat.inputs:
+  - type: filestream
+    id: applogs
+    paths:
+      - /var/log/app/*.log
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+
+processors:
+  - drop_fields:
+      fields: ["log", "input", "agent", "ecs", "host"]
+      ignore_missing: true
+
+output.kafka:
+  hosts:
+    - "172.31.29.117:9092"
+  topic: logs
+  required_acks: 1
+  username: "alice"
+  password: "<CHANGE_ME_ALICE_PASSWORD>"
+  sasl.mechanism: "PLAIN"
+
+logging.level: info
+logging.to_stderr: true

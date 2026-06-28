@@ -1,0 +1,28 @@
+sources:
+  kafka_logs:
+    type: kafka
+    bootstrap_servers: "172.31.29.117:9092"
+    group_id: "vector-consumer"
+    topics:
+      - "logs"
+    sasl:
+      enabled: true
+      mechanism: "PLAIN"
+      username: "bob"
+      password: "<CHANGE_ME_BOB_PASSWORD>"
+    decoding:
+      codec: "json"
+
+sinks:
+  opensearch:
+    type: "elasticsearch"
+    inputs: ["kafka_logs"]
+    endpoints:
+      - "http://172.31.24.64:9200"
+    api_version: "v8"
+    mode: "bulk"
+    bulk:
+      index: "applogs-%Y.%m.%d"
+    healthcheck:
+      enabled: false
+    compression: "none"

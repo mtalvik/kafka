@@ -1,0 +1,5 @@
+# SASL/PLAIN client config for charlie
+# Copy to charlie.properties and replace <CHANGE_ME> with real password.
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="charlie" password="<CHANGE_ME_CHARLIE_PASSWORD>";

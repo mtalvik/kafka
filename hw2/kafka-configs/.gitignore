@@ -1,0 +1,16 @@
+# Реальные креды и ключи — никогда в git
+kafka_server_jaas.conf
+clients/*.properties
+!clients/*.properties.example
+server.properties
+
+# Сертификаты и keystore
+*.pem
+*.jks
+*.p12
+ca-key
+ca-cert.srl
+
+# Логи и данные
+logs/
+kafka-data/

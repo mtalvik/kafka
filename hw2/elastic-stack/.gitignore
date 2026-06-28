@@ -1,0 +1,2 @@
+# Real values (passwords, IPs) — never in git
+.env
