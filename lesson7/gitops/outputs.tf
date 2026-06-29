@@ -4,13 +4,15 @@ output "topics" {
     kafka_topic.orders.name,
     kafka_topic.payments.name,
     kafka_topic.user_profiles.name,
+    kafka_topic.logs.name,
   ]
 }
 
 output "acls" {
-  description = "ACL principal → operation → resource mapping managed by Terraform."
+  description = "ACL summary per principal."
   value = {
-    "User:alice" = "Write/Describe on topic '${kafka_topic.orders.name}'"
-    "User:bob"   = "Read/Describe on topic '${kafka_topic.orders.name}', Read on any consumer group"
+    "User:alice" = "Write/Describe on orders, Write/Describe on logs (hw2 producer)"
+    "User:bob"   = "Read/Describe on orders, Read/Describe on logs (hw2 consumer), Read on any group"
+    "User:charlie" = "no ACLs — denied by default (negative test principal)"
   }
 }
