@@ -1,0 +1,2 @@
+# Real JAAS file with passwords — never commit
+kafka_server_jaas.conf

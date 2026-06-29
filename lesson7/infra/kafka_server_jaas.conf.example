@@ -1,0 +1,12 @@
+# Copy this file to kafka_server_jaas.conf and replace placeholders with real passwords.
+# kafka_server_jaas.conf must be gitignored. Never commit real credentials.
+
+KafkaServer {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="<ADMIN_PASSWORD>"
+   user_admin="<ADMIN_PASSWORD>"
+   user_alice="<ALICE_PASSWORD>"
+   user_bob="<BOB_PASSWORD>"
+   user_charlie="<CHARLIE_PASSWORD>";
+};
