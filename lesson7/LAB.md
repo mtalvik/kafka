@@ -1,0 +1,340 @@
+# Lesson 7 Lab — GitOps for Kafka topics and ACLs
+
+This lab demonstrates the modern production approach to Kafka cluster
+administration: declarative configuration in Git, reconciled with the
+live cluster by Terraform. The Terraform Kafka provider uses the Admin
+API under the hood — the same `createTopics`, `createAcls`, `deleteTopics`
+calls discussed in the lecture, just driven by HCL instead of Java.
+
+## What you will build
+
+- A Terraform module that manages Kafka topics, ACLs, and (optionally)
+  quotas declaratively
+- A single-node Kafka broker on AWS EC2 with SASL/PLAIN authentication
+  (reusing the hw2 setup)
+- The full hw2 log pipeline (Filebeat → Kafka → Vector → OpenSearch)
+  with all topics and ACLs managed through Terraform rather than
+  shell scripts
+
+By the end you will be able to add, modify, and remove Kafka resources
+by editing HCL files, running `terraform plan` to preview the change,
+and `terraform apply` to execute it. You will have seen drift detection,
+removal detection, and rollback.
+
+## Prerequisites
+
+- A working hw2 setup: three EC2 instances (`kafka`, `clients`, `elastic`)
+  with the lesson 6 broker configuration, alice/bob/charlie SASL users,
+  and the log pipeline.
+- AWS CloudShell access with `./aws-lab.sh` and the EC2 SSH key.
+- Git repository cloned to `~/REPOS/teaching/kafka/` on the local Mac
+  and pushed to `github.com/mtalvik/kafka`.
+
+## Architecture
+
+```
+  local Mac                           kafka EC2 (172.31.29.117)
+  ─────────                           ─────────────────────────
+  edit *.tf files                     ┌──────────────────────┐
+       │                              │ broker :9092         │
+       │ git commit / push            │   SASL/PLAIN         │
+       ▼                              │   StandardAuthorizer │
+  github.com/mtalvik/kafka            └──────────▲───────────┘
+       │                                         │
+       │ git pull (on EC2)                       │ Admin API
+       ▼                                         │
+  ~/kafka-repo/lesson7/gitops/        ┌──────────┴───────────┐
+       │                              │ terraform-provider-  │
+       │ terraform apply              │ kafka (Mongey/kafka) │
+       └─────────────────────────────►└──────────────────────┘
+```
+
+Terraform runs on the `kafka` EC2 itself (where the broker is reachable
+on `localhost:9092`) and stores its state file on the local disk. State
+in S3 would be the production setup; local state is sufficient for the
+lab.
+
+## Step 1: Verify the broker is running
+
+The broker must be running with SASL_PLAINTEXT on port 9092 and an
+`admin` user with full ACLs. If the broker is stopped (e.g. after
+`./aws-lab.sh stop`), start the instances first:
+
+```bash
+cd ~/otus-kafka
+./aws-lab.sh start
+./aws-lab.sh ssh kafka
+```
+
+On the kafka instance:
+
+```bash
+sudo systemctl status kafka
+```
+
+Expected output: `active (running)`. If the broker is not running,
+`sudo systemctl start kafka`. If `kafka.service` does not exist on
+this instance, see `infra/setup.sh` for first-time setup.
+
+Confirm authentication works:
+
+```bash
+cd ~/kafka
+bin/kafka-broker-api-versions.sh \
+  --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties | head -1
+```
+
+Expected: `172.31.29.117:9092 (id: 1 rack: null isFenced: false) -> (`.
+
+## Step 2: Clone the repo on the kafka EC2 and install Terraform
+
+```bash
+git clone https://github.com/mtalvik/kafka.git ~/kafka-repo
+sudo snap install terraform --classic
+terraform version
+```
+
+## Step 3: Provide the admin password
+
+The Terraform configuration takes `bootstrap_servers`, `admin_username`,
+and `admin_password` as input variables. Create `terraform.tfvars` (which
+is gitignored) with the values from the broker's JAAS file:
+
+```bash
+cd ~/kafka-repo/lesson7/gitops
+cp terraform.tfvars.example terraform.tfvars
+# Edit if your admin password differs from the example value.
+```
+
+## Step 4: Initialize Terraform
+
+```bash
+terraform init
+```
+
+This downloads the `Mongey/kafka` provider into `.terraform/`. Both
+`.terraform/` and `terraform.tfvars` are gitignored — they stay on this
+EC2 instance.
+
+## Step 5: Plan and apply
+
+```bash
+terraform plan
+```
+
+The output lists every resource Terraform will create, modify, or delete.
+On first run it should show `Plan: 9 to add, 0 to change, 0 to destroy`:
+four topics (`orders`, `payments`, `user-profiles`, `logs`) and five
+ACLs (alice/bob on `orders` and `logs`, bob on any consumer group).
+
+```bash
+terraform apply
+```
+
+Confirm with `yes`. Each resource takes about a second; full apply
+completes in 5–10 seconds.
+
+## Step 6: Verify against the live cluster
+
+```bash
+cd ~/kafka
+
+bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --list
+
+bin/kafka-acls.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --list
+```
+
+The topics and ACLs created by Terraform should appear in the output.
+
+## Step 7: Demonstrate drift detection
+
+Create a topic outside of Terraform — simulating someone bypassing the
+GitOps workflow:
+
+```bash
+bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --create --topic rogue-topic --partitions 1 --replication-factor 1
+```
+
+Return to the gitops directory and run plan:
+
+```bash
+cd ~/kafka-repo/lesson7/gitops
+terraform plan
+```
+
+Expected: `No changes`. The `Mongey/kafka` provider only manages
+resources that exist in its state — `rogue-topic` is invisible to it.
+
+This is a deliberate design choice. Terraform's "I only manage what I
+created" model means multiple teams can each run their own Terraform
+against the same cluster without stepping on each other. The trade-off
+is that orphan resources are not automatically detected; full-inventory
+detection requires either Strimzi (which owns the entire cluster
+namespace) or a separate audit job that diffs `kafka-topics --list`
+against the expected set.
+
+Clean up the rogue topic before continuing:
+
+```bash
+cd ~/kafka
+bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --delete --topic rogue-topic
+```
+
+## Step 8: Demonstrate removal detection
+
+Remove a topic from `topics.tf` to simulate a planned deprecation:
+
+```bash
+cd ~/kafka-repo/lesson7/gitops
+sed -i '/^resource "kafka_topic" "payments"/,/^}$/d' topics.tf
+sed -i '/kafka_topic.payments.name,/d' outputs.tf
+terraform plan
+```
+
+Expected output:
+
+```
+  # kafka_topic.payments will be destroyed
+  # (because kafka_topic.payments is not in configuration)
+Plan: 0 to add, 0 to change, 1 to destroy.
+```
+
+Terraform compares the configuration (what should exist) against state
+(what it created last time) and computes the diff. Removing a resource
+from configuration means destroying it on next apply.
+
+Do not apply this plan — restore the file:
+
+```bash
+git checkout topics.tf outputs.tf
+terraform plan
+```
+
+Expected: `No changes. Your infrastructure matches the configuration.`
+
+## Step 9: Demonstrate rollback
+
+Modify a topic's configuration (e.g. change `retention.ms` on `orders`),
+apply, then revert:
+
+```bash
+# Forward change
+sed -i 's|"retention.ms"     = "604800000"|"retention.ms"     = "86400000"|' topics.tf
+terraform apply  # confirm yes
+
+# Verify change took effect on the cluster
+cd ~/kafka
+bin/kafka-configs.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --entity-type topics --entity-name orders --describe \
+  | grep retention.ms
+
+# Rollback
+cd ~/kafka-repo/lesson7/gitops
+git checkout topics.tf
+terraform apply  # confirm yes
+
+# Verify rollback
+cd ~/kafka
+bin/kafka-configs.sh --bootstrap-server 172.31.29.117:9092 \
+  --command-config kafka-configs/clients/admin.properties \
+  --entity-type topics --entity-name orders --describe \
+  | grep retention.ms
+```
+
+The retention reverts to the original value. This rollback is what
+`AdminClient` Java code cannot provide without significant additional
+work (state tracking, undo log, etc.); Terraform gets it for free
+because Git holds the history.
+
+## Step 10: Verify the hw2 pipeline still works
+
+The `logs` topic and its ACLs are now managed by Terraform alongside
+the lesson 7 demo topics. Filebeat and Vector continue to use them as
+before — `terraform apply` did not change anything visible to the
+applications, only the management layer.
+
+On the elastic instance:
+
+```bash
+./aws-lab.sh ssh elastic
+curl -s "http://localhost:9200/_cat/indices/applogs-*?v"
+```
+
+The `applogs-YYYY.MM.DD` index for the current date should show a
+growing `docs.count`. If Filebeat was running while the cluster was
+without the `logs` topic (between apply runs in earlier sessions), it
+buffered events and resumed publishing as soon as the ACL was created.
+
+## What was demonstrated
+
+| Capability                | Achieved with Terraform                       | Achieved with shell scripts    |
+| ------------------------- | --------------------------------------------- | ------------------------------ |
+| Declarative state in Git  | Yes — `.tf` files are source of truth         | No — state is "in the cluster" |
+| Diff before change        | Yes — `terraform plan`                        | No                             |
+| Audit trail               | Yes — `git log`, `git blame`                  | Partial — shell history        |
+| Repeatable across envs    | Yes — same files apply to dev/staging/prod    | No — copy-paste commands       |
+| Drift detection (created) | Yes — plan shows out-of-band modifications    | No                             |
+| Drift detection (orphan)  | No (Terraform model); yes with Strimzi model  | No                             |
+| Rollback                  | Yes — `git revert` + `terraform apply`        | No                             |
+| Protect critical topics   | Yes — `lifecycle.prevent_destroy`             | No                             |
+
+## Repository layout
+
+```
+lesson7/
+├── LECTURE.md            — concepts and production patterns
+├── LAB.md                — this file
+├── gitops/
+│   ├── versions.tf       — Terraform version and provider requirements
+│   ├── provider.tf       — Mongey/kafka provider configuration
+│   ├── variables.tf      — input variables (bootstrap, credentials)
+│   ├── topics.tf         — kafka_topic resources
+│   ├── acls.tf           — kafka_acl resources
+│   ├── outputs.tf        — summary outputs
+│   ├── terraform.tfvars.example  — template for tfvars (real file gitignored)
+│   └── .gitignore        — excludes state, .terraform/, real tfvars
+└── infra/
+    ├── kafka.service     — systemd unit for the broker
+    ├── server.properties — broker configuration (KRaft, SASL_PLAINTEXT)
+    ├── kafka_server_jaas.conf.example — JAAS template (real one gitignored)
+    └── .gitignore
+```
+
+## Next steps beyond this lab
+
+1. **Remote state.** Move `terraform.tfstate` to an S3 backend with
+   DynamoDB locking. Required for any setup with more than one
+   operator running Terraform.
+2. **GitHub Actions.** Run `terraform plan` automatically on pull
+   requests and post the plan as a PR comment. Run `terraform apply`
+   on merge to main. With this in place, no human needs SSH access to
+   the broker for routine topic management.
+3. **`prevent_destroy` on critical topics.** Mark `logs` and any other
+   topic whose data loss would be operational impact:
+   ```hcl
+   lifecycle {
+     prevent_destroy = true
+   }
+   ```
+   Terraform will refuse to delete such topics until the lifecycle
+   block is removed in a separate PR — a deliberate two-step process
+   for destructive operations.
+4. **Topic naming policy.** Add validation in the Terraform module
+   (or in CI) that enforces team prefixes, lowercase names, no dots,
+   etc.
+5. **Quota management.** Add `kafka_quota` resources for per-user
+   throughput limits. Useful when multiple teams share a cluster.
+6. **Schema Registry.** When schemas are added (Avro, Protobuf), they
+   too become declarative resources via the
+   `confluentinc/confluent` provider's `confluent_schema` or via
+   Strimzi's `KafkaSchema` CRD.

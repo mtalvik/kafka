@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars and fill in real values.
 # terraform.tfvars is gitignored — never commit secrets.
 
-bootstrap_servers = ["172.31.29.117:9092"]
-admin_username    = "admin"
-admin_password    = "admin-secret"
+bootstrap_servers = ["<BROKER_HOST>:9092"]
+admin_username    = "<ADMIN_USERNAME>"
+admin_password    = "<ADMIN_PASSWORD>"
