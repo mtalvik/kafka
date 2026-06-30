@@ -156,6 +156,14 @@ authorize_self_reference() {
     --group-id "$1" --source-group "$1" --protocol all 2>/dev/null || true
 }
 
+ensure_my_ip_authorized() {
+  local sg_id ip
+  sg_id=$(get_sg_id)
+  [[ -z "$sg_id" || "$sg_id" == None ]] && return
+  ip=$(get_my_ip)
+  authorize_ports_for_ip "$sg_id" "$ip" >/dev/null
+}
+
 # ----------------------------------------------------------------------------
 # Commands
 # ----------------------------------------------------------------------------
@@ -286,6 +294,7 @@ cmd_ssh() {
   local host="${1:-}"
   shift || true
   [[ -z "$host" ]] && die "usage: ssh <kafka|elastic|clients> [command]"
+  ensure_my_ip_authorized
   local dns
   dns=$(get_public_dns "$host")
   [[ -z "$dns" || "$dns" == None ]] && die "host ${host} not running"
@@ -299,6 +308,7 @@ cmd_ssh() {
 cmd_scp() {
   local src="${1:-}" dst="${2:-}"
   [[ -z "$src" || -z "$dst" ]] && die "usage: scp <local-src> <host:remote-dst>"
+  ensure_my_ip_authorized
   local host="${dst%%:*}" path="${dst#*:}" dns
   dns=$(get_public_dns "$host")
   [[ -z "$dns" || "$dns" == None ]] && die "host ${host} not running"
@@ -322,6 +332,7 @@ cmd_start() {
   aws ec2 start-instances --instance-ids $ids >/dev/null
   # shellcheck disable=SC2086
   aws ec2 wait instance-running --instance-ids $ids
+  ensure_my_ip_authorized
   cmd_info
 }
 
