@@ -1,0 +1,36 @@
+services:
+  loggen:
+    image: alpine:3.20
+    container_name: loggen
+    restart: unless-stopped
+    command: sh /loggen.sh
+    volumes:
+      - ./loggen.sh:/loggen.sh:ro
+      - applogs:/var/log/app
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.3
+    container_name: filebeat
+    restart: unless-stopped
+    user: root
+    command: ["filebeat", "-e", "-strict.perms=false"]
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - applogs:/var/log/app:ro
+      - filebeat_data:/usr/share/filebeat/data
+    depends_on:
+      - loggen
+
+  vector:
+    image: timberio/vector:0.42.0-alpine
+    container_name: vector
+    restart: unless-stopped
+    volumes:
+      - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
+    command: ["--config", "/etc/vector/vector.yaml"]
+    depends_on:
+      - filebeat
+
+volumes:
+  applogs:
+  filebeat_data:

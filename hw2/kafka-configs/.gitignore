@@ -1,0 +1,16 @@
+# Secrets
+kafka_server_jaas.conf
+clients/*.properties
+!clients/*.properties.example
+server.properties
+
+# Certificates and keystores
+*.pem
+*.jks
+*.p12
+ca-key
+ca-cert.srl
+
+# Runtime data
+logs/
+kafka-data/
