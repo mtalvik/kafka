@@ -4,6 +4,7 @@
 # - alice/bob ACLs on "logs": hw2 pipeline
 #     - alice: Filebeat producer (WRITE + DESCRIBE)
 #     - bob: Vector consumer (READ + DESCRIBE on topic, READ on any group)
+# - alice/bob ACLs on "producer-lab": lesson 8 Java producer + verification consumer
 # - charlie: no ACLs — must remain denied for negative tests
 
 # ---------------------------------------------------------------------------
@@ -114,5 +115,53 @@ resource "kafka_acl" "bob_read_any_group" {
   acl_principal       = "User:bob"
   acl_host            = "*"
   acl_operation       = "Read"
+  acl_permission_type = "Allow"
+}
+
+# ---------------------------------------------------------------------------
+# Lesson 8 lab — producer-lab topic
+# ---------------------------------------------------------------------------
+
+resource "kafka_acl" "alice_write_producer_lab" {
+  resource_name                = kafka_topic.producer_lab.name
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Write"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "alice_describe_producer_lab" {
+  resource_name                = kafka_topic.producer_lab.name
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Describe"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "bob_read_producer_lab" {
+  resource_name                = kafka_topic.producer_lab.name
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Read"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "bob_describe_producer_lab" {
+  resource_name                = kafka_topic.producer_lab.name
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Describe"
   acl_permission_type = "Allow"
 }

@@ -2,6 +2,7 @@
 #
 # - orders, payments, user-profiles: lesson 7 GitOps demo topics
 # - logs: hw2 pipeline topic (Filebeat → Kafka → Vector → OpenSearch)
+# - producer-lab: lesson 8 Producer API examples (Ex1–Ex5)
 
 resource "kafka_topic" "orders" {
   name               = "orders"
@@ -50,5 +51,18 @@ resource "kafka_topic" "logs" {
 
   lifecycle {
     prevent_destroy = true
+  }
+}
+
+# lesson 8 Producer API lab topic. 3 partitions so key-based partitioning
+# (Ex4) and sticky partitioner behavior (Ex1) are observable.
+resource "kafka_topic" "producer_lab" {
+  name               = "producer-lab"
+  partitions         = 3
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000" # 1 hour — lab data, throwaway
   }
 }
