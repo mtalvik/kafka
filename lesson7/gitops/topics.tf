@@ -66,3 +66,55 @@ resource "kafka_topic" "producer_lab" {
     "retention.ms"   = "3600000" # 1 hour — lab data, throwaway
   }
 }
+
+# ---------------------------------------------------------------------------
+# lesson 10 Transactions / Exactly Once lab topics.
+#   tx-a, tx-b : Ex5 atomic multi-topic write; Ex7/Ex8 reuse tx-a
+#   tx-inbound, tx-outbound : Ex6 read-process-write (EOS loop)
+# Single partition each — visibility and ordering are the point here,
+# not parallelism.
+# ---------------------------------------------------------------------------
+
+resource "kafka_topic" "tx_a" {
+  name               = "tx-a"
+  partitions         = 1
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000"
+  }
+}
+
+resource "kafka_topic" "tx_b" {
+  name               = "tx-b"
+  partitions         = 1
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000"
+  }
+}
+
+resource "kafka_topic" "tx_inbound" {
+  name               = "tx-inbound"
+  partitions         = 1
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000"
+  }
+}
+
+resource "kafka_topic" "tx_outbound" {
+  name               = "tx-outbound"
+  partitions         = 1
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000"
+  }
+}

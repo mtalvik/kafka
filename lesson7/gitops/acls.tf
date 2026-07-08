@@ -165,3 +165,114 @@ resource "kafka_acl" "bob_describe_producer_lab" {
   acl_operation       = "Describe"
   acl_permission_type = "Allow"
 }
+
+# ---------------------------------------------------------------------------
+# Lesson 10 lab — Transactions / Exactly Once
+#
+#   alice: transactional producer + Ex6 transformer (consume tx-inbound,
+#          produce transactionally to tx-*). Needs, beyond plain WRITE:
+#            - a TransactionalId ACL (new resource type this lesson)
+#            - READ on the source topic and on the transformer group
+#   bob:   read_committed verification consumer on tx-a / tx-outbound
+#          (already has READ on any group from the shared section above)
+#
+# transactional.id values used by the examples are tx-ex5..tx-ex8, so a
+# single PREFIXED "tx-" ACL covers all of them instead of one per id.
+# ---------------------------------------------------------------------------
+
+# --- alice: TransactionalId (prefixed) ---
+
+resource "kafka_acl" "alice_write_txid" {
+  resource_name                = "tx-"
+  resource_type                = "TransactionalID"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Write"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "alice_describe_txid" {
+  resource_name                = "tx-"
+  resource_type                = "TransactionalID"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Describe"
+  acl_permission_type = "Allow"
+}
+
+# --- alice: Read on the Ex6 transformer group (prefixed) ---
+
+resource "kafka_acl" "alice_read_tx_group" {
+  resource_name                = "tx-"
+  resource_type                = "Group"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Read"
+  acl_permission_type = "Allow"
+}
+
+# --- alice: Write/Read/Describe on tx topics (prefixed) ---
+# Read is needed because the Ex6 transformer also consumes tx-inbound.
+
+resource "kafka_acl" "alice_write_tx_topics" {
+  resource_name                = "tx-"
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Write"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "alice_read_tx_topics" {
+  resource_name                = "tx-"
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Read"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "alice_describe_tx_topics" {
+  resource_name                = "tx-"
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:alice"
+  acl_host            = "*"
+  acl_operation       = "Describe"
+  acl_permission_type = "Allow"
+}
+
+# --- bob: read_committed verifier on tx topics (prefixed) ---
+
+resource "kafka_acl" "bob_read_tx_topics" {
+  resource_name                = "tx-"
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Read"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "bob_describe_tx_topics" {
+  resource_name                = "tx-"
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Describe"
+  acl_permission_type = "Allow"
+}

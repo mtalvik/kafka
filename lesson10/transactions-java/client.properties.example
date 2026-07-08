@@ -1,0 +1,12 @@
+# Copy to client.properties and fill in the real password.
+# client.properties is gitignored — never commit the password.
+#
+# alice is the single principal for this lab: transactional producer,
+# Ex6 transformer, and the verification consumers all run as alice.
+# alice's tx- ACLs (topics, TransactionalID, group) come from
+# lesson7/gitops applied for lesson 10.
+
+bootstrap.servers=localhost:9092
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="alice" password="<PLACEHOLDER>";
