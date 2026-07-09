@@ -3,7 +3,9 @@ package demo;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.ProducerFencedException;
+import org.apache.kafka.common.errors.InvalidProducerEpochException;
 
 /**
  * Ex8 — fencing.
@@ -44,14 +46,21 @@ public class Ex8Fenced {
             System.out.println("producer2 committed (epoch bumped, producer1 now fenced)");
         }
 
-        // producer1 is the zombie now
+        // producer1 is the zombie now. Depending on the broker version the
+        // stale epoch surfaces as ProducerFencedException,
+        // InvalidProducerEpochException, or a wrapping KafkaException — all
+        // mean the same thing: producer1 is fenced and must be recreated.
         try {
             producer1.beginTransaction();
             producer1.send(new ProducerRecord<>(Utils.TX_A, "from-1-again"));
             producer1.commitTransaction();
             System.out.println("producer1 committed again — UNEXPECTED, fencing failed");
-        } catch (ProducerFencedException e) {
-            System.out.println("ProducerFencedException as expected: producer1 is fenced, must be recreated");
+        } catch (ProducerFencedException | InvalidProducerEpochException e) {
+            System.out.println("FENCED as expected (" + e.getClass().getSimpleName()
+                    + "): producer1 holds a stale epoch, must be recreated");
+        } catch (KafkaException e) {
+            System.out.println("FENCED as expected (" + e.getClass().getSimpleName()
+                    + "): producer1 rejected by coordinator, must be recreated");
         } finally {
             producer1.close();
         }
