@@ -17,8 +17,7 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Shared setup: the SASL/PLAIN connection block, the Streams config that makes
- * the app survive on a single-node broker, and the run loop.
+ * Shared setup: SASL/PLAIN connection block, Streams config, run loop.
  */
 final class Utils {
 
@@ -28,10 +27,7 @@ final class Utils {
     static final String COUNTS_TOPIC = "events-session-counts";
     static final String COUNTS_FINAL_TOPIC = "events-session-counts-final";
 
-    /**
-     * Inactivity gap. Five minutes is the assignment; override it while testing
-     * so a session actually closes inside one sitting:  -Dgap.minutes=1
-     */
+    /** Inactivity gap. Override while testing: -Dgap.minutes=1 */
     static Duration inactivityGap() {
         return Duration.ofMinutes(Long.getLong("gap.minutes", 5L));
     }
@@ -45,21 +41,16 @@ final class Utils {
             throw new RuntimeException("failed to load " + path, e);
         }
 
-        // application.id is also the consumer group id and the prefix of every
-        // internal topic this app creates.
+        // application.id is also the consumer group id and the internal topic prefix.
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationId);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
-        // Single-node broker. Streams creates its changelog topic itself and, left
-        // alone, asks for the broker's default.replication.factor. On a one-broker
-        // cluster that request fails with INVALID_REPLICATION_FACTOR and the app
-        // dies during startup. Same trap as __transaction_state and _schemas.
+        // Streams creates its changelog topic itself; without this it asks for the
+        // broker's default.replication.factor=3 and dies on a single-node cluster.
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
 
-        // Emit every update rather than buffering them: the point is to watch the
-        // count move as records arrive. Note the config was renamed in 3.x —
-        // cache.max.bytes.buffering is gone in 4.0.
+        // Emit every update instead of buffering.
         props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1000);
 
@@ -98,7 +89,7 @@ final class Utils {
     private static final DateTimeFormatter TIME =
             DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
-    /** Session windows are [start, end] in event time — print them readably. */
+    /** Session windows are [start, end] in event time. */
     static String window(long startMs, long endMs) {
         return TIME.format(Instant.ofEpochMilli(startMs)) + ".." + TIME.format(Instant.ofEpochMilli(endMs));
     }
