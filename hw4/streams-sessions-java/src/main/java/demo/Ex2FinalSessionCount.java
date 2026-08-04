@@ -16,17 +16,10 @@ import org.apache.kafka.streams.state.SessionStore;
 import java.time.Duration;
 
 /**
- * Same aggregation as Ex1, but only the final count per session is emitted.
- *
- * suppress(untilWindowCloses) holds every intermediate update in memory and
- * releases one record per session once stream time passes end + gap + grace.
- * Two consequences worth seeing:
- *
- *   1. No tombstones reach the output — merges are resolved inside the buffer.
- *   2. Nothing is emitted until a *later* record advances stream time. Stream
- *      time comes from record timestamps, not the wall clock, so a session for
- *      key A closes only when some record (any key) arrives with a timestamp
- *      past A's deadline. Stop producing and the last session never prints.
+ * Same aggregation as Ex1, but suppress(untilWindowCloses) releases one record
+ * per session instead of every update. Nothing is emitted until stream time --
+ * driven by record timestamps, not the wall clock -- passes the session
+ * deadline, so the last session stays held until a later record arrives.
  */
 public class Ex2FinalSessionCount {
 
