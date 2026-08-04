@@ -6,7 +6,8 @@ All commands run on the `kafka` EC2 (KRaft, single node, SASL/PLAIN). Nothing ru
 
 ```bash
 # on the kafka EC2
-cd ~/REPOS/teaching/kafka       # the teaching repo clone
+# ~/kafka-repo is the repo clone; ~/kafka is the broker install
+cd ~/kafka-repo
 git pull
 cd lesson14/streams-java
 ```
@@ -17,9 +18,10 @@ The Gradle wrapper is not checked in — the `kafka` EC2 has Gradle 8.8 and JDK 
 gradle --version                 # expect Gradle 8.8, JVM 17
 ```
 
-First build pulls dependencies and burns CPU credits on t3.small — slow once, fast after:
+t3.small is memory-tight; cap the JVM or the first build gets OOM-killed:
 
 ```bash
+export GRADLE_OPTS="-Xmx256m"
 gradle build --no-daemon
 ```
 
@@ -28,9 +30,9 @@ gradle build --no-daemon
 Topics and ACLs for this lab are managed by Terraform in `lesson7/gitops`, not created by hand. This is the same GitOps workflow from lesson 7, and it is not optional here: the Streams app runs as `bob`, and `bob` has no Create permission on the cluster, so `kafka-topics.sh --create` under that principal fails.
 
 ```bash
-cd ~/REPOS/teaching/kafka/lesson7/gitops
+cd ~/kafka-repo/lesson7/gitops
 terraform apply
-cd ~/REPOS/teaching/kafka/lesson14/streams-java
+cd ~/kafka-repo/lesson14/streams-java
 ```
 
 This creates `stock-ticks`, `stock-transactions`, `top-shares`, `windowed-counts`, `transaction-summary`, `enriched-summary` (2 partitions each) plus the compacted GlobalKTable sources `companies` and `customers`, and grants `bob` Read/Write/Describe on all of them.
@@ -45,7 +47,7 @@ The console tools and the Streams app authenticate as a principal. We reuse `bob
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=PLAIN
 sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
-  username="bob" password="bob-secret";
+  username="bob" password="bob-pass";
 ```
 
 Set `BS` and `CC` for the console commands below:
