@@ -1,0 +1,17 @@
+// proto-contracts/src/main/proto/transact.proto
+syntax = "proto3";
+package com.example.datacontracts.transacts;
+option java_package = "com.example.datacontracts.transacts";
+option java_outer_classname = "TransactProto";
+
+message OrderAggregate {
+  string order_id = 1;
+  double price = 2;
+  repeated BasketItem items = 3;
+  int64 aggregated_at = 4;
+}
+
+message BasketItem {
+  string product_id = 1;
+  int32 quantity = 2;
+}

@@ -1,0 +1,11 @@
+# Copy to client.properties and fill in the real password.
+# client.properties is gitignored — never commit the password.
+#
+# This lab runs as admin (a super-user, from lesson 7 super.users=User:admin)
+# so no ACLs are needed — the focus is serialization, not authz. Only Ex1 and
+# Ex8 contact the broker; the rest are pure in-memory.
+
+bootstrap.servers=localhost:9092
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="<PLACEHOLDER>";

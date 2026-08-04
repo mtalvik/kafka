@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "User",
+  "namespace": "demo.kafka",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    }
+  ]
+}

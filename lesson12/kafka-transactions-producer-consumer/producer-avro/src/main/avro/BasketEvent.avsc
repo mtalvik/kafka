@@ -1,0 +1,11 @@
+// producer-avro/src/main/avro/BasketEvent.avsc
+{
+  "type": "record",
+  "name": "BasketEvent",
+  "namespace": "com.example.produceravro",
+  "fields": [
+    {"name": "orderId", "type": "string"},
+    {"name": "productId", "type": "string"},
+    {"name": "quantity", "type": "int"}
+  ]
+}

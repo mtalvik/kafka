@@ -1,0 +1,12 @@
+# Copy to client.properties and fill in the real password.
+# client.properties is gitignored — never commit the password.
+#
+# Kafka Streams needs more than read/write on `events`: it creates and manages
+# its own changelog topic and its consumer group. Running as admin (super-user,
+# from lesson 7 super.users=User:admin) keeps the focus on the streaming logic
+# instead of on ACL bookkeeping.
+
+bootstrap.servers=localhost:9092
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="<PLACEHOLDER>";

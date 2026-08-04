@@ -276,3 +276,74 @@ resource "kafka_acl" "bob_describe_tx_topics" {
   acl_operation       = "Describe"
   acl_permission_type = "Allow"
 }
+
+# ---------------------------------------------------------------------------
+# Lessons 14 and 15 - Kafka Streams
+#
+# Both lessons run their topologies as bob. A Streams app is a consumer, a
+# producer and an admin client at once, so the principal needs more than the
+# usual read-or-write split:
+#
+#   - Read + Write + Describe on every source and sink topic. Which is which
+#     differs per exercise, so granting all three on the lab topics keeps this
+#     block readable instead of tracking direction topic by topic.
+#   - Read + Write + Describe + Create + Delete on the PREFIXED internal
+#     topics. Streams creates changelog and repartition topics itself at
+#     startup, named "<application.id>-...", hence Create. Delete is for
+#     kafka-streams-application-reset between runs.
+#   - Read on the consumer Group named after application.id. bob already has
+#     Read on Group "*" in the shared section above, so nothing is added here.
+#
+# application.id convention: lesson14-ex1..ex4, lesson15-ex1..ex6. The two
+# prefixes below cover every internal topic of both lessons.
+# ---------------------------------------------------------------------------
+
+locals {
+  streams_lab_topics = concat(
+    keys(kafka_topic.streams_dsl_lab),
+    keys(kafka_topic.streams_dsl_lookup),
+    keys(kafka_topic.streams_lab),
+  )
+
+  streams_topic_grants = {
+    for pair in setproduct(local.streams_lab_topics, ["Read", "Write", "Describe"]) :
+    "${pair[0]}-${lower(pair[1])}" => {
+      topic     = pair[0]
+      operation = pair[1]
+    }
+  }
+
+  streams_internal_grants = {
+    for pair in setproduct(["lesson14-", "lesson15-"], ["Read", "Write", "Describe", "Create", "Delete"]) :
+    "${pair[0]}${lower(pair[1])}" => {
+      prefix    = pair[0]
+      operation = pair[1]
+    }
+  }
+}
+
+resource "kafka_acl" "bob_streams_lab_topics" {
+  for_each = local.streams_topic_grants
+
+  resource_name                = each.value.topic
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = each.value.operation
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "bob_streams_internal_topics" {
+  for_each = local.streams_internal_grants
+
+  resource_name                = each.value.prefix
+  resource_type                = "Topic"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = each.value.operation
+  acl_permission_type = "Allow"
+}

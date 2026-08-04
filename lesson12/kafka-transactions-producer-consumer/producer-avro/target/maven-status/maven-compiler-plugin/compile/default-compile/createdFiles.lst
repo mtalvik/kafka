@@ -1,0 +1,3 @@
+com/example/produceravro/ProducerAvro.class
+com/example/produceravro/BasketEvent.class
+com/example/produceravro/BasketEvent$Builder.class
