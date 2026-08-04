@@ -196,7 +196,10 @@ resource "kafka_topic" "streams_lab" {
     "electronics-events"  = 1
     "cafe-events"         = 1
     "coupons"             = 1
-    "events"              = 1
+    # 3 partitions: hw4 feeds several keys by hand and the point is that they
+    # hash to different partitions, so the app does real per-key work rather
+    # than reading one ordered log. lesson15 Ex6 is unaffected.
+    "events"              = 3
   }
 
   name               = each.key

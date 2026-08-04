@@ -82,19 +82,26 @@ Expected: `active (running)`.
 
 ## Step 2: Create the topics
 
+`events` is already managed by Terraform in `lesson7/gitops` (3 partitions,
+RF 1) — it is shared with lesson 15. Apply that first if you have not:
+
+```bash
+cd ~/kafka-repo/lesson7/gitops && terraform apply
+```
+
+The two output topics belong to this homework alone, so create them by hand:
+
 ```bash
 cd ~/kafka
 bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
   --command-config kafka-configs/clients/admin.properties \
-  --create --topic events --partitions 3 --replication-factor 1
+  --create --if-not-exists --topic events-session-counts \
+  --partitions 1 --replication-factor 1
 
 bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
   --command-config kafka-configs/clients/admin.properties \
-  --create --topic events-session-counts --partitions 1 --replication-factor 1
-
-bin/kafka-topics.sh --bootstrap-server 172.31.29.117:9092 \
-  --command-config kafka-configs/clients/admin.properties \
-  --create --topic events-session-counts-final --partitions 1 --replication-factor 1
+  --create --if-not-exists --topic events-session-counts-final \
+  --partitions 1 --replication-factor 1
 ```
 
 Three partitions on `events` is deliberate: keys hash to different partitions,
