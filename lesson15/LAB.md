@@ -10,9 +10,9 @@ there is no separate Streams process to deploy, the app runs inside
 
 ```bash
 ssh-add ~/.ssh/id_ed25519_mtalvik          # on the Mac, before scp/ssh
-# on the kafka EC2:
-cd ~/REPOS/teaching/kafka/lesson15/streams-java
-git pull
+# on the kafka EC2 (~/kafka-repo is the repo clone; ~/kafka is the broker install):
+cd ~/kafka-repo/lesson15/streams-java
+git -C ~/kafka-repo pull
 cp client.properties.example client.properties
 # set the bob password:
 sed -i "s|REPLACE_ME|$(grep user_bob ~/kafka/config/kafka_server_jaas.conf | cut -d'"' -f2)|" client.properties
@@ -29,10 +29,11 @@ EOF
 ```
 
 Gradle is installed system-wide on this host (8.8, JDK 17, since lesson 8) —
-there is no wrapper in the repo. The first build downloads the Streams
-dependencies and is slow once:
+there is no wrapper in the repo. t3.small is memory-tight, so cap the JVM
+before building:
 
 ```bash
+export GRADLE_OPTS="-Xmx256m"
 gradle build --no-daemon
 ```
 
@@ -44,9 +45,9 @@ permission on the cluster, so creating these topics by hand under that
 principal fails.
 
 ```bash
-cd ~/REPOS/teaching/kafka/lesson7/gitops
+cd ~/kafka-repo/lesson7/gitops
 terraform apply
-cd ~/REPOS/teaching/kafka/lesson15/streams-java
+cd ~/kafka-repo/lesson15/streams-java
 ```
 
 Thirteen topics, all `replication_factor = 1`. Every one is single-partition
