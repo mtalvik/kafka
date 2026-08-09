@@ -51,6 +51,12 @@ examples.each { name, cls ->
         mainClass = cls
         systemProperty 'client.properties.path', file('client.properties').absolutePath
 
+        // Kafka logs its full effective config at INFO on startup - several
+        // hundred lines per client, four clients per app. The exercises print
+        // to stdout, and those lines have to be findable. warn keeps real
+        // problems visible and drops the config dumps.
+        systemProperty 'org.slf4j.simpleLogger.defaultLogLevel', 'warn'
+
         // t3.small runs the broker alongside these JVMs. ex5 starts TWO
         // instances at once, so the heap cap is not optional there - without
         // it the JVM claims a quarter of host RAM and the second instance is

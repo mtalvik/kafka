@@ -117,9 +117,11 @@ from aborted transactions. Consumers that must not see them set
   which the reader proceeds.
 
 > **Timeout figure.** Slides commonly quote 60 s. That is the broker/producer
-> default for `transaction.timeout.ms`. Streams overrides it downward for its
-> own producer — verify the effective value on the cluster in use rather than
-> quoting the generic default.
+> default for `transaction.timeout.ms`, but Streams overrides it for its own
+> producer: the effective value is **10 s**, confirmed against Kafka 4.3 via
+> `kafka-transactions.sh describe` (`TransactionTimeoutMs 10000`). So an
+> abandoned transaction blocks `read_committed` readers for ten seconds, not a
+> minute.
 
 ### State stores and crash recovery
 

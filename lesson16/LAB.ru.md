@@ -39,6 +39,16 @@ export GRADLE_OPTS="-Xmx256m"
 gradle build --no-daemon
 ```
 
+> **Про логи.** Kafka на старте печатает полный конфиг каждого клиента на
+> уровне INFO — сотни строк, в которых тонет вывод самих упражнений.
+> Поэтому в `build.gradle` уровень логгера понижен до `warn`.
+>
+> Если надо заглянуть внутрь (например, увидеть `transactional.id` в блоке
+> `ProducerConfig values:`), верни INFO на один запуск:
+> ```bash
+> gradle ex1 --no-daemon -Dorg.slf4j.simpleLogger.defaultLogLevel=info
+> ```
+
 Переменные, используемые дальше во всех разделах:
 
 ```bash
@@ -113,10 +123,10 @@ gradle ex1 --no-daemon
 
 ```bash
 printf '%s\n' "k1:10" "k2:20" | ~/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server $BS --producer.config $CFG --topic eos-input \
+  --bootstrap-server $BS --command-config $CFG --topic eos-input \
   --property parse.key=true --property key.separator=:
 
-~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --consumer.config $CFG \
+~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --command-config $CFG \
   --topic eos-output --from-beginning --max-messages 2
 ```
 
@@ -157,17 +167,31 @@ gradle ex1 --no-daemon -Peos=true
 `CompleteCommit`/`Ongoing` меняется в такт `commit.interval.ms`, который под
 EOS равен 100 мс.
 
+Заодно посмотри на `TransactionTimeoutMs` — там **10000**, то есть 10 секунд.
+Слайды OTUS называют 60 секунд — это дефолт обычного producer, а Streams
+ставит своё значение. Значит, брошенная транзакция держит
+`read_committed`-читателей десять секунд, а не минуту.
+
+`ProducerEpoch` — счётчик поколений. При каждом перезапуске он растёт, и по
+нему брокер отсекает зомби — зависший старый экземпляр, который вдруг ожил и
+пытается писать.
+
+`TopicPartitions` пустое, пока транзакция закрыта. Если поймать её в
+состоянии `Ongoing`, там будут перечислены `eos-output-*` и
+`__consumer_offsets-*` — то самое «выход плюс оффсеты в одной транзакции» из
+лекции, видное глазами.
+
 ### Шаг 2.3 — read_committed против read_uncommitted
 
 Отличие видно на потребителе. Запусти два консьюмера параллельно:
 
 ```bash
 # терминал C — обычный, видит всё
-~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --consumer.config $CFG \
+~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --command-config $CFG \
   --topic eos-output --from-beginning
 
 # терминал D — только закоммиченное
-~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --consumer.config $CFG \
+~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --command-config $CFG \
   --topic eos-output --from-beginning \
   --isolation-level read_committed
 ```
@@ -226,9 +250,9 @@ Topologies:
 
 ```bash
 echo "hello papi" | ~/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server $BS --producer.config $CFG --topic papi-input
+  --bootstrap-server $BS --command-config $CFG --topic papi-input
 
-~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --consumer.config $CFG \
+~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --command-config $CFG \
   --topic papi-output --from-beginning --max-messages 1
 ```
 
@@ -274,14 +298,14 @@ gradle ex3 --no-daemon
 
 ```bash
 printf '%s\n' "s1:20" "s2:95" "s1:30" | ~/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server $BS --producer.config $CFG --topic sensor-readings \
+  --bootstrap-server $BS --command-config $CFG --topic sensor-readings \
   --property parse.key=true --property key.separator=:
 ```
 
 Порог — 80. Ждём ближайший тик пунктуатора и смотрим алерты:
 
 ```bash
-~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --consumer.config $CFG \
+~/kafka/bin/kafka-console-consumer.sh --bootstrap-server $BS --command-config $CFG \
   --topic sensor-alerts --from-beginning --property print.key=true
 ```
 
@@ -332,7 +356,7 @@ printf '%s\n' \
   "c1,e7,cafe,8.50,4111111111111234" \
   "c2,e9,electronics,900.00,5555444433332222" \
   | ~/kafka/bin/kafka-console-producer.sh --bootstrap-server $BS \
-    --producer.config $CFG --topic purchases
+    --command-config $CFG --topic purchases
 ```
 
 Смотри вывод приложения. Процессор печатает `partition` и `offset` каждой
@@ -370,8 +394,8 @@ free -m
 pkill -f GradleDaemon
 ```
 
-Каждый инстанс запускается с `-Xmx192m` (прописано в `build.gradle` через
-`applicationDefaultJvmArgs`). Не убирай это — без ограничения JVM возьмёт
+Каждый инстанс запускается с `-Xmx192m` (прописано в `build.gradle` через `jvmArgs`
+в блоке задач). Не убирай это — без ограничения JVM возьмёт
 четверть памяти хоста под heap, и второй инстанс либо не поднимется, либо
 его убьёт OOM killer в середине ребаланса.
 
@@ -399,7 +423,7 @@ gradle ex5 --no-daemon -Pport=8080
 ```bash
 printf '%s\n' "energy:1" "finance:1" "retail:1" "energy:1" "finance:1" \
   | ~/kafka/bin/kafka-console-producer.sh --bootstrap-server $BS \
-    --producer.config $CFG --topic iq-events \
+    --command-config $CFG --topic iq-events \
     --property parse.key=true --property key.separator=:
 ```
 
