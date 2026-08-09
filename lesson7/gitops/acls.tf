@@ -294,8 +294,9 @@ resource "kafka_acl" "bob_describe_tx_topics" {
 #   - Read on the consumer Group named after application.id. bob already has
 #     Read on Group "*" in the shared section above, so nothing is added here.
 #
-# application.id convention: lesson14-ex1..ex4, lesson15-ex1..ex6. The two
-# prefixes below cover every internal topic of both lessons.
+# application.id convention: lesson14-ex1..ex4, lesson15-ex1..ex6,
+# lesson16-ex1..ex5. The three prefixes below cover every internal topic of
+# all three lessons.
 # ---------------------------------------------------------------------------
 
 locals {
@@ -303,6 +304,7 @@ locals {
     keys(kafka_topic.streams_dsl_lab),
     keys(kafka_topic.streams_dsl_lookup),
     keys(kafka_topic.streams_lab),
+    keys(kafka_topic.streams_papi_lab),
   )
 
   streams_topic_grants = {
@@ -314,7 +316,7 @@ locals {
   }
 
   streams_internal_grants = {
-    for pair in setproduct(["lesson14-", "lesson15-"], ["Read", "Write", "Describe", "Create", "Delete"]) :
+    for pair in setproduct(["lesson14-", "lesson15-", "lesson16-"], ["Read", "Write", "Describe", "Create", "Delete"]) :
     "${pair[0]}${lower(pair[1])}" => {
       prefix    = pair[0]
       operation = pair[1]
@@ -345,5 +347,66 @@ resource "kafka_acl" "bob_streams_internal_topics" {
   acl_principal       = "User:bob"
   acl_host            = "*"
   acl_operation       = each.value.operation
+  acl_permission_type = "Allow"
+}
+
+# ---------------------------------------------------------------------------
+# Lesson 16 - exactly-once in Kafka Streams
+#
+# Setting processing.guarantee = exactly_once_v2 turns the Streams producer
+# into a transactional producer, so bob needs the same TransactionalID grants
+# alice got in lesson 10 - but on a different prefix.
+#
+# Streams does not let you choose the transactional.id: it derives it from
+# application.id ("<application.id>-<processId>-<threadIdx>" under v2). Since
+# every lesson 16 application.id starts with "lesson16-", one PREFIXED ACL
+# covers all five exercises.
+#
+# This is exactly why the application.id must be stable. An id built as
+# "app-" + UUID.randomUUID() produces a different transactional.id on every
+# run, and no reasonable prefix ACL can cover it - the run fails with
+# TransactionalIdAuthorizationException. Worth showing students on purpose.
+# ---------------------------------------------------------------------------
+
+resource "kafka_acl" "bob_write_lesson16_txid" {
+  resource_name                = "lesson16-"
+  resource_type                = "TransactionalID"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Write"
+  acl_permission_type = "Allow"
+}
+
+resource "kafka_acl" "bob_describe_lesson16_txid" {
+  resource_name                = "lesson16-"
+  resource_type                = "TransactionalID"
+  resource_pattern_type_filter = "Prefixed"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "Describe"
+  acl_permission_type = "Allow"
+}
+
+# IdempotentWrite on the cluster.
+#
+# On brokers from 3.0 onward this is not strictly required - Write on a topic
+# is enough to produce idempotently, and the broker no longer checks
+# IdempotentWrite separately. Granted anyway: it is harmless, it matches what
+# every transactional-producer reference still lists, and it removes one
+# variable if EOS initialisation misbehaves during the lab.
+#
+# The cluster resource is always named "kafka-cluster" in the ACL API.
+
+resource "kafka_acl" "bob_idempotent_write" {
+  resource_name                = "kafka-cluster"
+  resource_type                = "Cluster"
+  resource_pattern_type_filter = "Literal"
+
+  acl_principal       = "User:bob"
+  acl_host            = "*"
+  acl_operation       = "IdempotentWrite"
   acl_permission_type = "Allow"
 }

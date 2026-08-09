@@ -211,3 +211,54 @@ resource "kafka_topic" "streams_lab" {
     "retention.ms"   = "3600000" # 1 hour - lab data, throwaway
   }
 }
+
+# ---------------------------------------------------------------------------
+# lesson 16 Kafka Streams lab topics - transactions, Processor API,
+# Interactive Queries.
+#
+#   eos-input / eos-output   : Ex1 exactly_once_v2 on/off. TWO partitions so
+#                              the topology has more than one task and the
+#                              producer-per-thread behaviour of v2 is
+#                              actually being exercised, not assumed.
+#   papi-input / papi-output : Ex2 hand-built Topology (addSource /
+#                              addProcessor / addSink). Single partition -
+#                              the point is graph shape, not parallelism.
+#   sensor-readings /
+#   sensor-alerts            : Ex3 stateful processor + wall-clock
+#                              Punctuator. Two input partitions so the
+#                              punctuator runs per task and students see two
+#                              independent sweeps.
+#   iq-events                : Ex5 Interactive Queries. THREE partitions on
+#                              purpose - with two application instances the
+#                              assignment is uneven, so some keys are always
+#                              remote and queryMetadataForKey has to do real
+#                              routing rather than always answering locally.
+#
+# Ex4 (process() inside a DSL chain) reuses "purchases" from lesson 15
+# rather than adding another topic.
+#
+# As in lessons 14-15, changelog and repartition topics are NOT declared
+# here - Streams creates them at runtime under the application.id prefix,
+# which is why acls.tf grants Create on "lesson16-".
+# ---------------------------------------------------------------------------
+
+resource "kafka_topic" "streams_papi_lab" {
+  for_each = {
+    "eos-input"       = 2
+    "eos-output"      = 2
+    "papi-input"      = 1
+    "papi-output"     = 1
+    "sensor-readings" = 2
+    "sensor-alerts"   = 1
+    "iq-events"       = 3
+  }
+
+  name               = each.key
+  partitions         = each.value
+  replication_factor = 1
+
+  config = {
+    "cleanup.policy" = "delete"
+    "retention.ms"   = "3600000" # 1 hour - lab data, throwaway
+  }
+}
