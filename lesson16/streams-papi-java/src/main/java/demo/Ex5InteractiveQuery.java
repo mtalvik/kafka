@@ -3,13 +3,16 @@ package demo;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.state.HostInfo;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
@@ -60,10 +63,12 @@ public final class Ex5InteractiveQuery {
         props.put(StreamsConfig.STATE_DIR_CONFIG, "state/lesson16-ex5-" + port);
 
         StreamsBuilder builder = new StreamsBuilder();
-        builder.stream("iq-events")
+        // Consumed.with is not optional here: without it the stream is typed
+        // KStream<Object, Object> from the default serdes, and count() then
+        // demands a Materialized<Object, Long, ...> that will not match.
+        builder.stream("iq-events", Consumed.with(Serdes.String(), Serdes.String()))
                .groupByKey()
-               .count(Materialized.<String, Long>as(
-                       org.apache.kafka.streams.state.Stores.persistentKeyValueStore(STORE))
+               .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(STORE)
                        .withKeySerde(Serdes.String())
                        .withValueSerde(Serdes.Long()));
 
