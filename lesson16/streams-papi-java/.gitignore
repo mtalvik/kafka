@@ -1,0 +1,4 @@
+.gradle/
+build/
+/state/
+client.properties
