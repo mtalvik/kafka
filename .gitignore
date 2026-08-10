@@ -30,3 +30,5 @@ cert-client-file
 cert-client-signed
 lesson10/lecture.ru.md
 lesson10/EXPLAINER.ru.md
+.gradle/
+build/

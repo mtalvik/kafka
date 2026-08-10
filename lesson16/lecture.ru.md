@@ -457,8 +457,13 @@ KIP-796 (3.2) добавил второй интерфейс запросов,
 
 ## Ссылки
 
+- Билл Беджек, «Kafka Streams в действии» (Manning / Питер) — книга, на
+  которую ссылается презентация OTUS; пример со скользящей выборкой в Ex3
+  взят оттуда.
 - Kafka Streams Developer Guide — Processor API, Interactive Queries,
   processing guarantees.
+- Punctuate use cases:
+  `https://cwiki.apache.org/confluence/display/KAFKA/Punctuate+Use+Cases`
 - KIP-447 — producer-per-thread для exactly-once (`exactly_once_v2`).
 - KIP-535 — `queryMetadataForKey`, запросы к standby-репликам.
 - KIP-796 — Interactive Query v2.

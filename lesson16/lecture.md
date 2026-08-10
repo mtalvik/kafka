@@ -463,8 +463,12 @@ remains the straightforward one to learn; IQv2 is worth knowing exists.
 
 ## References
 
+- Bill Bejeck, *Kafka Streams in Action* (Manning) — the book the OTUS deck
+  cites; the stock-performance example in Ex3 comes from it.
 - Kafka Streams Developer Guide — Processor API, Interactive Queries,
   processing guarantees.
+- Punctuate use cases:
+  `https://cwiki.apache.org/confluence/display/KAFKA/Punctuate+Use+Cases`
 - KIP-447 — producer-per-thread scalability for exactly-once (`exactly_once_v2`).
 - KIP-535 — `queryMetadataForKey`, querying standby replicas.
 - KIP-796 — Interactive Query v2.
